@@ -7,8 +7,8 @@ from retriever.retriever import WineRetriever
 
 client = OpenAI(api_key="sk-efc9807bf70b4426a1ec62e790cb9697", base_url="https://api.deepseek.com")
 retriever = WineRetriever(
-    index_path="../data/processed/wine_embeddings.index",
-    docs_path="../data/processed/wine_docs.pkl"
+    index_path="data/processed/wine_embeddings.index",
+    docs_path="data/processed/wine_docs.pkl"
 )
 
 def answer_query_rag(user_query):

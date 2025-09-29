@@ -5,7 +5,7 @@ import numpy as np
     cleaning the text, and saving the processed data to a new CSV file."""
     
 # Load the CSV file
-data = pd.read_csv(r'..\data\raw\winedb.csv')
+data = pd.read_csv(r'..\data\raw\wine_dataset_clean.csv')
 
 
 def build_doc(row):
@@ -25,6 +25,7 @@ def build_doc(row):
         f"Image URL: {row.get('Image_URL', 'N/A')}.\n"
         f"Permalink: {row.get('Permalink', 'N/A')}.\n"
         f"Description: {row.get('Description', 'N/A')}"
+        
     )
 
 data['document'] = data.apply(build_doc, axis=1) 

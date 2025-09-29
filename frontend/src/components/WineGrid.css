@@ -1,0 +1,21 @@
+/* Grid layout for wine cards (single-column stack on small screens,
+   two-column on medium, three-column on large) */
+.wg-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+}
+
+/* responsive breakpoints */
+@media (min-width: 720px) {
+  .wg-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1100px) {
+  .wg-grid {
+    grid-template-columns: 1fr;
+  }
+}

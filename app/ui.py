@@ -7,8 +7,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from generator.generator import answer_query_rag
 
+# Streamlit setup
 st.set_page_config(page_title="🍷 Wine Sommelier Chatbot", layout="centered")
-
 st.title("🍇 Wine Chatbot")
 st.markdown("Ask me anything about wine, pairing, region, or recommendations!")
 
@@ -23,9 +23,43 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"], unsafe_allow_html=True)
 
-# Input from user
+# User input
 user_query = st.chat_input("Type your wine question here...")
 
+def render_wine_card_md(wine):
+    """Render a wine card using Markdown so it shows properly in chat."""
+    title = wine.get("title", "Unnamed Wine")
+    region = wine.get("region", "N/A")
+    price = wine.get("price", "N/A")
+    aromas = wine.get("aromas", "N/A")
+    pairing = wine.get("pairing", "N/A")
+    wine_type = wine.get("type", "N/A")
+    alcohol = wine.get("alcohol", "N/A")
+    why = wine.get("why", "N/A")
+    link = wine.get("permalink", "")
+    image = wine.get("image", "")
+
+    parts = []
+
+    if image:
+        parts.append(f"![]({image})")
+
+    parts.append(f"### 🍷 {title}")
+    parts.append(f"- **Region:** {region}")
+    parts.append(f"- **Type:** {wine_type}")
+    parts.append(f"- **Aromas/Flavors:** {aromas}")
+    parts.append(f"- **Pairings:** {pairing}")
+    parts.append(f"- **Alcohol:** {alcohol}")
+    parts.append(f"- **Price:** {price}")
+    parts.append(f"- **Why Try It?** {why}")
+
+    if link:
+        parts.append(f"- [🔗 Buy Here]({link})")
+
+    card_md = "\n".join(parts)
+    st.markdown(card_md, unsafe_allow_html=True)
+
+# Process user query
 if user_query:
     st.session_state.messages.append({"role": "user", "content": user_query})
     with st.chat_message("user"):
@@ -34,69 +68,24 @@ if user_query:
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                # Follow-up intent like "where can I buy it"
-                if any(kw in user_query.lower() for kw in ["buy it", "purchase it", "where to get it", "where can i buy"]):
-                    if st.session_state.last_sources:
-                        response = "Here are the wines you asked about earlier:\n\n"
-                        for wine in st.session_state.last_sources:
-                            title = wine.get("title", "Wine")
-                            link = wine.get("permalink", "")
-                            img = wine.get("image", "")
+                response = answer_query_rag(user_query)
 
-                            if img:
-                                st.image(img, caption=title, use_column_width=True)
-                            st.markdown(f"🔗 [{title}]({link})", unsafe_allow_html=True)
+                if isinstance(response, dict) and "answer" in response:
+                    answer_text = response["answer"]
+                    wines = response.get("structured_wines", [])
+                    st.session_state.last_sources = wines
 
-                            response += f"- [{title}]({link})\n"
-                    else:
-                        response = "Sorry, I don’t have a previous wine to reference. Could you ask again with wine details?"
+                    if wines:
+                        for wine in wines:
+                            render_wine_card_md(wine)
 
+                    if answer_text:
+                        st.markdown(f"**Suggested Choice Based on Preference:**\n\n{answer_text}", unsafe_allow_html=True)
+
+                    st.session_state.messages.append({"role": "assistant", "content": answer_text})
+                else:
                     st.markdown(response)
                     st.session_state.messages.append({"role": "assistant", "content": response})
-
-                else:
-                    # Main RAG response
-                    response = answer_query_rag(user_query)
-
-                    if isinstance(response, dict) and "answer" in response:
-                        answer_text = response["answer"]
-                        sources = response.get("sources", [])
-                        shown_titles = set()
-
-                        # Show any wine image mentioned in the answer
-                        for wine in sources:
-                            title = wine.get("title", "").strip()
-                            image_url = wine.get("image", "")
-                            if title and image_url and title.lower() in answer_text.lower() and title not in shown_titles:
-                                st.markdown(f"**{title}**", unsafe_allow_html=True)
-                                st.image(image_url, caption=title, use_column_width=True)
-                                shown_titles.add(title)
-
-                        st.markdown(answer_text, unsafe_allow_html=True)
-
-                        # Show all sources with small image preview and link
-                        if sources:
-                            for wine in sources:
-                                title = wine.get("title", "Unknown Wine")
-                                link = wine.get("permalink", "")
-                                img = wine.get("image", "")
-
-                                cols = st.columns([1, 5])
-                                with cols[0]:
-                                    if img:
-                                        st.image(img, width=60)
-                                with cols[1]:
-                                    st.markdown(f"🔗 [{title}]({link})", unsafe_allow_html=True)
-
-                            st.session_state.last_sources = sources
-
-                        full_response = answer_text + "\n\n" + "\n".join(
-                            [f"[{w['title']}]({w['permalink']})" for w in sources]
-                        )
-                        st.session_state.messages.append({"role": "assistant", "content": full_response})
-                    else:
-                        st.markdown(response)
-                        st.session_state.messages.append({"role": "assistant", "content": response})
 
             except Exception as e:
                 st.error(f"Error: {e}")
